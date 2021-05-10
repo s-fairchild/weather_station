@@ -1,0 +1,6 @@
+aprslib==0.6.47
+gpiozero==1.6.2
+mariadb==1.0.6
+bme280pi==1.1.0
+pyserial==3.5
+py-sds011==0.9

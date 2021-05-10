@@ -3,11 +3,13 @@ import aprslib, time
 from math import trunc
 from db import WeatherDatabase
 from rainfall import RainMonitor
+import logging
 
 class SendAprs:
-    def __init__(self):
-        self.db = WeatherDatabase()
+    def __init__(self, db, loglevel="logging.DUBUG"):
+        self.db = db
         self.rmonitor = RainMonitor()
+        logging.basicConfig(level=loglevel)
         
     # Convert temperature, wind direction, wind speed, and wind gusts to 3 digits
     def add_zeros(self, num):
@@ -79,28 +81,25 @@ class SendAprs:
 
             tmp['wdir'] = self.add_zeros(tmp['wdir'])
 
-            packet = f"{config['aprs']['callsign']}>APRS,TCPIP*:@{tmp['ztime']}z{config['aprs']['longitude']}/{config['aprs']['latitude']}_{tmp['wdir']}/{tmp['wspeed']}g{tmp['wgusts']}t{tmp['temperature']}r{tmp['rain1h']}p{tmp['rain24h']}P{tmp['rain00m']}b{tmp['pressure']}h{tmp['humidity']}{config['aprs']['comment']}"
+            self.packet = f"{config['aprs']['callsign']}>APRS,TCPIP*:@{tmp['ztime']}z{config['aprs']['longitude']}/{config['aprs']['latitude']}_{tmp['wdir']}/{tmp['wspeed']}g{tmp['wgusts']}t{tmp['temperature']}r{tmp['rain1h']}p{tmp['rain24h']}P{tmp['rain00m']}b{tmp['pressure']}h{tmp['humidity']}{config['aprs']['comment']}"
             del(tmp) # Clean up temporary dictionary
-            return packet
+            return self.packet
             
     def send_data(self, data, config):
         packet = self.make_packet(data, config)
         if config.getboolean('aprs', 'sendall'):
             for server in config['servers']:
-                for i in range(1, 4): # Retry 3 times increasing delay by 10 seconds each time
-                    delay = i * 10
-                    AIS = aprslib.IS(config['aprs']['callsign'], config['aprs']['passwd'], config['servers'][server], config['aprs']['port'])
-                    try:
-                        AIS.connect()
-                        AIS.sendall(packet)
-                        print(f"Packet transmitted to {config['servers'][server]} at {time.strftime('%Y-%m-%d %H:%M', time.gmtime())} UTC time")
-                    except Exception as error:
-                        print(f"{error}\nRetry number: {i}\n Trying again in {delay} seconds...")
-                        time.sleep(delay)
-                        continue
-                    finally:
-                        AIS.close()
-                transmitted = 1
+                AIS = aprslib.IS(config['aprs']['callsign'], config['aprs']['passwd'], config['servers'][server], config['aprs']['port'])
+                try:
+                    AIS.connect()
+                    AIS.sendall(packet)
+                    print(f"Packet transmitted to {config['servers'][server]} at {time.strftime('%Y-%m-%d %H:%M', time.gmtime())} UTC time")
+                    break
+                except Exception as e:
+                    print(f"An exception occured trying to send packet to {server}\nException: {e}")
+                finally:
+                    AIS.close()
+            transmitted = 1
         else:
             transmitted = 0
         self.db.read_save_packet(packet[:-len(config['aprs']['comment'])], transmitted) # Store packet in database without comment field

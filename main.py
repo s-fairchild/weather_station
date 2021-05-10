@@ -8,7 +8,8 @@ from aprs import SendAprs
 def start_bme280():
     try:
         sensor = Sensor(0x77)
-    except Exception:
+    except Exception as e:
+        print(f"Exception occured while setting bme280 to address 0x77: {e}\nTrying address 0x76")
         sensor = Sensor(0x76)
     try:
         chipid, version = sensor._get_info_about_sensor()
@@ -25,7 +26,10 @@ def enable_disable_sensors(): #TODO Set all required keys as 0 and find a new wa
         'wdir': 0,
         'rain1h': 0,
         'rain24h': 0,
-        'rain00m': 0
+        'rain00m': 0,
+        'pm25_avg': 0,
+        'pm10_avg': 0,
+        'rainfall': 0
     }
     for item in config['sensors']: # If an item in config is boolean false assign value of 0 to signify uncollected data
         if config['sensors'].getboolean(item) is False: 
@@ -44,10 +48,11 @@ def wait_delay(start_time):
         stdout.flush(); sleep(wait_time) # Flush buffered output and wait exactly 5 minutes from start time
 
 if __name__=="__main__":
-    db = WeatherDatabase(); aprs = SendAprs()
     config = configparser.ConfigParser()
     print("reading config file...")
-    config.read('wxstation.conf')    
+    config.read('wxstation.conf')
+    db = WeatherDatabase(password=config['hardware']['db_pass'],host=config['hardware']['db_host'])
+    aprs = SendAprs(db, config['aprs']['loglevel'])
     if config['sensors'].getboolean('bme280'):
         sensor = start_bme280()
     data = enable_disable_sensors()
@@ -57,8 +62,6 @@ if __name__=="__main__":
         print("Starting rainfall monitoring thread.")
         th_rain = th.Thread(target=rmonitor.monitor, daemon=True)
         th_rain.start()
-    else:
-        data['rainfall'] = 0
     if config['sensors'].getboolean('wspeed'):
         from wspeed import WindMonitor
         from statistics import mean
@@ -68,25 +71,30 @@ if __name__=="__main__":
         th_wmonitor = th.Thread(target=wmonitor.monitor_wind, daemon=True)
         th_wspeed = th.Thread(target=wmonitor.calculate_speed, args=[stop_event], daemon=True)
         th_wspeed.start(); th_wmonitor.start()
-    if config['serial'].getboolean('enabled'): # If SDS011 is enabled collect readings
-        from sds011 import MonitorAirQuality
-        print("Starting AirQuality monitoring thread.")
-        air_monitor = MonitorAirQuality()
-        th_sds011 = th.Thread(target=air_monitor.monitor) # Assign true readings
-        th_sds011.start()
-    else:
-        data['pm25_avg'], data['pm10_avg'] = 0, 0 # Assign 0 value if disabled
     if config['sensors'].getboolean('wdir'):
         from wdir import WindDirectionMonitor
         wdir_monitor = WindDirectionMonitor()
         print("Starting wind direction monitoring thread.")
         th_wdir = th.Thread(target=wdir_monitor.monitor, daemon=True)
         th_wdir.start()
+    if config['serial'].getboolean('enabled'): # If SDS011 is enabled collect readings
+        from pysds011 import MonitorAirQuality
+        print("Loading AirQuality monitoring modules.")
+        if config['serial']['tty'] in config and config['serial']['tty'] is not None:
+            air_monitor = MonitorAirQuality(tty=config['serial']['tty'], interval=config['serial']['interval'])
+        else:
+            air_monitor = MonitorAirQuality(interval=config['serial']['interval'])
+    if config['hardware'].getboolean('si4713'):
+        from si4713 import FM_Transmitter
+        fm_transmitter = FM_Transmitter()
     print("Done reading config file.\nStarting main program now.")
 
     while True:
         start_time = time() # Capture loop start time
-        
+        if config['serial'].getboolean('enabled'): # If SDS011 is enabled make and start thread
+            th_sds011 = th.Thread(target=air_monitor.monitor)
+            th_sds011.start()
+
         if config['sensors'].getboolean('bme280'):
             data['temperature'] = sensor.get_temperature(unit='F')
             data['pressure'] = sensor.get_pressure()
@@ -107,14 +115,40 @@ if __name__=="__main__":
             data['wdir'] = wdir_monitor.average() # Record average wind direction in degrees
             wdir_monitor.wind_angles.clear() # Clear readings to average
         
-        if 'th_sds011' in locals():
-            data['pm25_avg'], data['pm10_avg'] = air_monitor.average()
-            air_monitor.air_values['pm25_total'].clear(); air_monitor.air_values['pm10_total'].clear()
+        if config['serial'].getboolean('enabled'): # If SDS011 is enabled collect readings
+            from pysds011 import MonitorAirQuality
+            print("Starting AirQuality monitoring thread.")
+            if config['serial']['tty'] in config and config['serial']['tty'] is not None:
+                air_monitor = MonitorAirQuality(tty=config['serial']['tty'], interval=config['serial']['interval'])
+            else:
+                air_monitor = MonitorAirQuality(interval=config['serial']['interval'])
+            th_sds011 = th.Thread(target=air_monitor.monitor)
+            th_sds011.start()
 
         if 'th_rain' in locals():
             data['rainfall'] = rmonitor.total_rain(); rmonitor.clear_total_rain()
+        
+        if config['serial'].getboolean('enabled'):
+            th_sds011.join() # wait for thread to complete before getting average readings
+            data['pm25_avg'], data['pm10_avg'] = air_monitor.average()
+            air_monitor.air_values['pm25_total'].clear(); air_monitor.air_values['pm10_total'].clear() # Reset readings used for averages
 
-        th_senddata, th_sensorsave = th.Thread(target=aprs.send_data(data, config)), th.Thread(target=db.read_save_sensors(data))
-        th_sensorsave.start(); th_senddata.start()
-        th_senddata.join(); th_sensorsave.join()
+        if config['hardware'].getboolean('tcpip'):
+            th_senddata_tcpip = th.Thread(target=aprs.send_data(data, config))
+
+        if 'fm_transmitter' in locals():            
+            th_fm_transmit= th.Thread(target=fm_transmitter.manage_soundfile(aprs.make_packet(data, config)))
+
+        th_sensorsave = th.Thread(target=db.read_save_sensors(data))
+        if 'th_senddata_tcpip' in locals():
+            th_senddata_tcpip.start()
+
+        if 'fm_transmitter' in locals():
+            th_fm_transmit.start()
+        th_sensorsave.start()
+        if 'th_senddata_tcpip' in locals():
+            th_senddata_tcpip.join()
+        if 'fm_transmitter' in locals():
+            th_fm_transmit.join()
+        th_sensorsave.join()
         wait_delay(start_time)

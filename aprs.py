@@ -6,10 +6,11 @@ from rainfall import RainMonitor
 import logging
 
 class SendAprs:
-    def __init__(self, db, loglevel="logging.DUBUG"):
+    def __init__(self, db, loglevel="DEBUG"):
         self.db = db
         self.rmonitor = RainMonitor()
-        logging.basicConfig(level=loglevel)
+        self.loglevel = f"logging.{loglevel}"
+        logging.basicConfig(level=self.loglevel)
         
     # Convert temperature, wind direction, wind speed, and wind gusts to 3 digits
     def add_zeros(self, num):

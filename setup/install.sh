@@ -25,8 +25,8 @@ debian_pkgs="mariadb-server libmariadb3 libmariadb-dev"
 py_pkgs="mariadb bme280pi gpiozero pyserial aprslib py-sds011"
 user="wxstation"
 # database setup variables
-root_password='password'
-db_userpass='P@ssw0rd'
+root_password='P@ssw0rd'
+db_userpass='password'
 db_name='weather'
 
 # Create user service account and service

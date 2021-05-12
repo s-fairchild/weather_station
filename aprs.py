@@ -78,7 +78,7 @@ class SendAprs:
             
     def send_data(self, data, config):
         packet = self.make_packet(data, config)
-        if config.getboolean('aprs', 'sendall'):
+        if config['aprs']['sendall']:
             for server in config['servers']:
                 AIS = aprslib.IS(config['aprs']['callsign'], config['aprs']['passwd'], config['servers'][server], config['aprs']['port'])
                 try:

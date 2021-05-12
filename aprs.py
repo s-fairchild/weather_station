@@ -2,7 +2,6 @@ from rainfall import RainMonitor
 import aprslib, time
 from math import trunc
 from db import WeatherDatabase
-from rainfall import RainMonitor
 import logging
 
 class SendAprs:

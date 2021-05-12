@@ -16,7 +16,10 @@ data = {
     'rain00m': 0,
     'pm25_avg': 0,
     'pm10_avg': 0,
-    'rainfall': 0
+    'rainfall': 0,
+    'pressure' : 0,
+    'temperature' : 0,
+    'humidity' : 0
 }
 
 def start_bme280():

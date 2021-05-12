@@ -16,9 +16,9 @@ class SendAprs:
             elif num < 9 and num >= 0: # add 00 in front if between 0 and 9
                 return f"00{num}"
             elif num < 0 and num > -9:
-                return f"00{num}"
+                return f"-0{abs(num)}"
             elif num < -9:
-                return f"0{num}"
+                return f"-{abs(num)}"
             else:
                 return num
         else:

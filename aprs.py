@@ -1,4 +1,3 @@
-from rainfall import RainMonitor
 import aprslib, time
 from math import trunc
 from db import WeatherDatabase
@@ -7,9 +6,7 @@ import logging
 class SendAprs:
     def __init__(self, db, loglevel="DEBUG"):
         self.db = db
-        self.rmonitor = RainMonitor()
-        self.loglevel = f"logging.{loglevel}"
-        logging.basicConfig(level=self.loglevel)
+        logging.basicConfig(level=loglevel)
         
     # Convert temperature, wind direction, wind speed, and wind gusts to 3 digits
     def add_zeros(self, num):
@@ -57,24 +54,18 @@ class SendAprs:
             tmp['ztime'] = time.strftime('%d%H%M', time.gmtime()) # Get zulu/UTC time
 
             all_rain_avgs = self.db.get_all_rain_avg()
-            if self.format_rain(all_rain_avgs['1']) == 0.0 and self.rmonitor.tips == 0:
+            if self.format_rain(all_rain_avgs['1']) == 0.0:
                 tmp['rain1h'] = self.format_rain(all_rain_avgs['1'])
-            elif self.rmonitor.tips > 0:
-                tmp['rain1h'] = self.format_rain(self.rmonitor.tips)
             else:
                 tmp['rain1h'] = self.format_rain(all_rain_avgs['1'])
 
-            if self.format_rain(all_rain_avgs['24']) == 0.0 and self.rmonitor.tips == 0:
+            if self.format_rain(all_rain_avgs['24']) == 0.0:
                 tmp['rain24h'] = self.format_rain(all_rain_avgs['24'])
-            elif self.rmonitor.tips > 0:
-                tmp['rain24h'] = self.format_rain(self.rmonitor.tips)
             else:
                 tmp['rain24h'] = self.format_rain(all_rain_avgs['24'])
 
-            if self.format_rain(all_rain_avgs['00']) == 0.0 and self.rmonitor.tips == 0:
+            if self.format_rain(all_rain_avgs['00']) == 0.0:
                 tmp['rain00m'] = self.format_rain(all_rain_avgs['00'])
-            elif self.rmonitor.tips > 0:
-                tmp['rain00m'] = self.format_rain(self.rmonitor.tips)
             else:
                 tmp['rain00m'] = self.format_rain(all_rain_avgs['00'])
             del(all_rain_avgs)

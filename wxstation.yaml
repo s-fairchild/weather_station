@@ -3,9 +3,10 @@ bme280_addr : 0x77
 # Tipping bucket size
 bucket_size : 0.2794
 tcpip : True
-db_host : "127.0.0.1"
-db_pass : "password1"
+db_host : 127.0.0.1
+db_pass : password
 loglevel : INFO
+report_interval : 10 # Interval to take reports in seconds
 
 sensors:
   bme280 : True
@@ -32,7 +33,7 @@ sensors:
 sds011:
   tty : /dev/ttyUSB0
   baudrate : 9600
-  enabled : 0
+  enabled : False
   quiet : 0
   # Set time in seconds to take sds011 readings to save sensor lifespan
   interval : 60
@@ -61,3 +62,5 @@ aprs:
     # Gerry Creager, N5JXS - - - Norman, Oklahoma 
     server4 : cwop2.ou.edu
   }
+
+dev_mode: False

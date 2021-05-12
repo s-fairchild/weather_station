@@ -55,6 +55,12 @@ class WeatherDatabase:
         conn = self.db_connect(); cur = conn.cursor()
         cur.execute(query)
         row = cur.fetchone()
+        if row[0] is None:
+            query = """SELECT rainfall FROM sensors ORDER BY id DESC LIMIT 1;"""
+            cur.execute(query)
+            latest = cur.fetchone()
+            if latest[0] is not None:
+                return latest[0]
         conn.close()
         return 0.0 if row[0] is None else row[0] # Rainfall readings of 0.000 will return NULL, return 0 if NULL
 

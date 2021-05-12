@@ -1,4 +1,3 @@
-from bme280pi import Sensor
 from sys import stdout
 import aprs, threading as th
 from time import sleep, time
@@ -44,12 +43,27 @@ def wait_delay(start_time):
         print(f"Generating next report in {round((wait_time / 60), 2)} minutes")
         stdout.flush(); sleep(wait_time) # Flush buffered output and wait exactly 5 minutes from start time
 
+def parse_config():
+    try:
+        print("Reading fand.yaml.")
+        with open(config_file, 'r') as file:
+            config = safe_load(file)
+        print("Successfully read fand.yaml.")
+        if len(config) != 0:
+            return config
+        else:
+            print(f"config file loaded with 0 length, somethings wrong.")
+    except Exception as e:
+        print(f"Could not read fand.yaml, {e}")
+
 if __name__=="__main__":
     print(f"Reading {config_file}")
-    config = safe_load(config_file)
+    config = parse_config()
     db = WeatherDatabase(password=config['db_pass'],host=config['db_host'])
     aprs = SendAprs(db, config['loglevel'])
     if config['sensors']['bme280']:
+        print(f"{config['sensors']['bme280']}")        
+        from bme280pi import Sensor
         sensor = start_bme280()
     if config['sensors']['rain1h']:
         from rainfall import RainMonitor

@@ -5,7 +5,6 @@ from db import WeatherDatabase
 from aprs import SendAprs
 from yaml import safe_load
 
-config_file = 'wxstation.yaml'
 data = {
     'callsign': "",
     'wspeed': 0,
@@ -35,18 +34,17 @@ def start_bme280():
         print(f"{e}: Unable to get BME280 ChipID and Version")
     return sensor
 
-def wait_delay(start_time):
-        seconds = 300
+def wait_delay(start_time, interval):
         end_time = time() # Capture end time
-        wait_time = round(seconds - (end_time - start_time)) # Calculate time to wait before restart loop
+        wait_time = round(interval - (end_time - start_time)) # Calculate time to wait before restart loop
         if wait_time < 0:
             abs(wait_time)
         elif wait_time == 0:
-            wait_time = 300
+            wait_time = interval
         print(f"Generating next report in {round((wait_time / 60), 2)} minutes")
         stdout.flush(); sleep(wait_time) # Flush buffered output and wait exactly 5 minutes from start time
 
-def parse_config():
+def parse_config(config_file):
     try:
         print("Reading fand.yaml.")
         with open(config_file, 'r') as file:
@@ -59,9 +57,21 @@ def parse_config():
     except Exception as e:
         print(f"Could not read fand.yaml, {e}")
 
+def gen_random_data():
+    from random import randint, random
+    from math import trunc
+    r = random()
+    data['wdir'] = randint(0, 364)
+    data['pressure'] = randint(900, 1000) + randint(100, 200) * r # shift decimal point to the left 1 and round
+    data['temperature'] = randint(-32, 110)
+    data['wspeed'] = randint(0, 100)
+    data['wgusts'] = data['wspeed'] + randint(0, 10)
+    data['humidity'] = randint(0, 100)
+    data['rainfall'] = randint(0, 5)
+
 if __name__=="__main__":
-    print(f"Reading {config_file}")
-    config = parse_config()
+    print("Reading 'wxstation.yaml'")
+    config = parse_config('wxstation.yaml')
     db = WeatherDatabase(password=config['db_pass'],host=config['db_host'])
     aprs = SendAprs(db, config['loglevel'])
     if config['sensors']['bme280']:
@@ -102,6 +112,8 @@ if __name__=="__main__":
     print("Done reading config file.\nStarting main program now.")
 
     while True:
+        if config['dev_mode']:
+            gen_random_data()
         start_time = time() # Capture loop start time
         if 'air_monitor' in locals(): # If SDS011 is enabled make and start thread
             th_sds011 = th.Thread(target=air_monitor.monitor)
@@ -144,13 +156,19 @@ if __name__=="__main__":
         th_sensorsave = th.Thread(target=db.read_save_sensors(data))
         if 'th_senddata_tcpip' in locals():
             th_senddata_tcpip.start()
-
+        else:
+            packet = aprs.make_packet(data, config)
+            th_packetsave = th.Thread(target=db.read_save_packet(packet[:-len(config['aprs']['comment'])], 0))
+            th_packetsave
+            
+        th_sensorsave.start()
         if 'fm_transmitter' in locals():
             th_fm_transmit.start()
-        th_sensorsave.start()
         if 'th_senddata_tcpip' in locals():
             th_senddata_tcpip.join()
+        else:
+            th_packetsave.join()
         if 'fm_transmitter' in locals():
             th_fm_transmit.join()
         th_sensorsave.join()
-        wait_delay(start_time)
+        wait_delay(start_time, config['report_interval'])

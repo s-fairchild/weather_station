@@ -63,7 +63,7 @@ def gen_random_data():
     r = random()
     data['wdir'] = randint(0, 364)
     data['pressure'] = randint(900, 1000) + randint(100, 200) * r # shift decimal point to the left 1 and round
-    data['temperature'] = randint(-32, 110)
+    data['temperature'] = randint(-99, 120)
     data['wspeed'] = randint(0, 100)
     data['wgusts'] = data['wspeed'] + randint(0, 10)
     data['humidity'] = randint(0, 100)

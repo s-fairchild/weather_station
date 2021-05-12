@@ -2,7 +2,7 @@ import mariadb as db
 from time import sleep
 
 class WeatherDatabase:
-    def __init__(self, user="wxstation", password="P@ssw0rd", host="127.0.0.1", port=3306, database="weather"):
+    def __init__(self, user="wxstation", password="password", host="127.0.0.1", port=3306, database="weather"):
         self.user = user
         self.password = password
         self.host = host

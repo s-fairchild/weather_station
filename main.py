@@ -74,17 +74,17 @@ if __name__=="__main__":
     config = parse_config('wxstation.yaml')
     db = WeatherDatabase(password=config['db_pass'],host=config['db_host'])
     aprs = SendAprs(db, config['loglevel'])
-    if config['sensors']['bme280']:
+    if config['sensors']['bme280'] and config['dev_mode'] is False:
         print(f"{config['sensors']['bme280']}")        
         from bme280pi import Sensor
         sensor = start_bme280()
-    if config['sensors']['rain1h']:
+    if config['sensors']['rain1h'] and config['dev_mode'] is False:
         from rainfall import RainMonitor
         rmonitor = RainMonitor()
         print("Starting rainfall monitoring thread.")
         th_rain = th.Thread(target=rmonitor.monitor, daemon=True)
         th_rain.start()
-    if config['sensors']['wspeed']:
+    if config['sensors']['wspeed'] and config['dev_mode'] is False:
         from wspeed import WindMonitor
         from statistics import mean
         wmonitor = WindMonitor()
@@ -93,20 +93,20 @@ if __name__=="__main__":
         th_wmonitor = th.Thread(target=wmonitor.monitor_wind, daemon=True)
         th_wspeed = th.Thread(target=wmonitor.calculate_speed, args=[stop_event], daemon=True)
         th_wspeed.start(); th_wmonitor.start()
-    if config['sensors']['wdir']:
+    if config['sensors']['wdir'] and config['dev_mode'] is False:
         from wdir import WindDirectionMonitor
         wdir_monitor = WindDirectionMonitor()
         print("Starting wind direction monitoring thread.")
         th_wdir = th.Thread(target=wdir_monitor.monitor, daemon=True)
         th_wdir.start()
-    if config['sds011']['enabled']: # If SDS011 is enabled collect readings
+    if config['sds011']['enabled'] and config['dev_mode'] is False: # If SDS011 is enabled collect readings
         from pysds011 import MonitorAirQuality
         print("Loading AirQuality monitoring modules.")
         if config['sds011']['tty'] in config and config['sds011']['tty'] is not None:
             air_monitor = MonitorAirQuality(tty=config['sds011']['tty'], interval=config['sds011']['interval'])
         else:
             air_monitor = MonitorAirQuality(interval=config['sds011']['interval'])
-    if config['sensors']['si4713']:
+    if config['sensors']['si4713'] and config['dev_mode'] is False:
         from si4713 import FM_Transmitter
         fm_transmitter = FM_Transmitter()
     print("Done reading config file.\nStarting main program now.")

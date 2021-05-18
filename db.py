@@ -2,7 +2,7 @@ import mariadb as db
 from time import sleep
 
 class WeatherDatabase:
-    def __init__(self, user="wxstation", password="P@ssw0rd", host="127.0.0.1", port=3306, database="weather"):
+    def __init__(self, user="wxstation", password="password", host="127.0.0.1", port=3306, database="weather"):
         self.user = user
         self.password = password
         self.host = host
@@ -55,6 +55,12 @@ class WeatherDatabase:
         conn = self.db_connect(); cur = conn.cursor()
         cur.execute(query)
         row = cur.fetchone()
+        if row[0] is None:
+            query = """SELECT rainfall FROM sensors ORDER BY id DESC LIMIT 1;"""
+            cur.execute(query)
+            latest = cur.fetchone()
+            if latest is not None:
+                return latest[0]
         conn.close()
         return 0.0 if row[0] is None else row[0] # Rainfall readings of 0.000 will return NULL, return 0 if NULL
 

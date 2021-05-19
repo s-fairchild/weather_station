@@ -18,7 +18,11 @@ if [[ "$(whoami)" != "root" ]]; then
 else
     clear
 fi
-source setup_settings.env
+if [[ -f setup_settings.env ]]; then
+    source setup_settings.env
+else
+    echo -e "setup_settings not found.\nAre you in the setup directory?\nExiting"; exit 1
+fi
 # Create user service account and service
 create_user() {
     grep ${service_account} /etc/passwd > /dev/null
@@ -44,6 +48,13 @@ install_pkgs() {
 
 # Create and setup mariadb
 setup_db() {
+    if [[ -f /etc/init.d/mysql ]]; then
+        /etc/init.d/mysql start
+    elif [[ -f /etc/systemd/system/mysql.service ]] || [[ -f /usr/lib/systemd/system/mysql.service ]]; then
+        systemctl enable --now mysql.service
+    elif [[ -f /etc/systemd/system/mariadb-server.service ]] || [[ -f /usr/lib/systemd/system/mariadb-server.service ]]; then
+        systemctl enable --now mariadb-server.service
+    fi
     printf "Creating $db_name database\n"
     mysql -e "CREATE DATABASE IF NOT EXISTS $db_name;"
     echo "creating $db_user in mariadb"
@@ -89,7 +100,7 @@ ExecStart=/usr/bin/python3 -u /opt/wxstation/bin/main.py\n\
 Restart=on-failure\n\
 
 [Install]\n\
-WantedBy=multi-user.target"\n\ > /usr/lib/systemd/system/wxstation.service
+WantedBy=multi-user.target" > /usr/lib/systemd/system/wxstation.service
     systemctl daemon-reload
     systemctl enable wxstation.service
     else

@@ -26,11 +26,6 @@ create_user() {
         useradd -m -d ${service_dir} -c "wxstation service account" -r ${service_account}
         usermod -aG ${service_groups} ${service_account}
     fi
-    cp wxstation.service /etc/systemd/system/
-    systemctl enable wxstation.service
-    if [[ "$?" != "0" ]]; then
-        echo "Installed wxstation.service"
-    fi
 }
 
 install_pkgs() {
@@ -79,24 +74,50 @@ setup_db() {
             packet VARCHAR(82) NOT NULL,\
             transmitted BOOL NOT NULL);"
 }
+systemd_setup() {
+    if [[ -d /usr/lib/systemd/system ]]; then
+    echo -e "[Unit]\n\
+Description=Wxstation Service\n\
+After=network.target\n\
+
+[Service]\n\
+Type=simple\n\
+User=wxstation\n\
+WorkingDirectory=/opt/wxstation/bin\n\
+Environment=PYTHONPATH=/opt/wxstation/bin\n\
+ExecStart=/usr/bin/python3 -u /opt/wxstation/bin/main.py\n\
+Restart=on-failure\n\
+
+[Install]\n\
+WantedBy=multi-user.target"\n\ > /usr/lib/systemd/system/wxstation.service
+    systemctl daemon-reload
+    systemctl enable wxstation.service
+    else
+        echo "Unable to install wxstation.service, directory /usr/lib/systemd/system does not exist"
+    fi
+}
 rclocal_install() {
-    
-        echo -e "[Unit]\n\
-                Description=/etc/rc.local\n\
-                ConditionPathExists=/etc/rc.local\n\n\
-                
-                [Service]\n\
-                Type=forking\n\
-                ExecStart=/etc/rc.local start\n\
-                TimeoutSec=0\n\
-                StandardOutput=tty\n\
-                RemainAfterExit=yes\n\
-                SysVStartPriority=99\n\n\
-                
-                [Install]\n\
-                WantedBy=multi-user.target" > /usr/lib/systemd/system/rc-local.service
+    if [[ -d /usr/lib/systemd/system ]]; then
+    echo -e "[Unit]\n\
+Description=/etc/rc.local\n\
+ConditionPathExists=/etc/rc.local\n\
+
+[Service]\n\
+Type=forking\n\
+ExecStart=/etc/rc.local start\n\
+TimeoutSec=0\n\
+StandardOutput=tty\n\
+RemainAfterExit=yes\n\
+SysVStartPriority=99\n\
+
+[Install]\n\
+WantedBy=multi-user.target" > /usr/lib/systemd/system/rc-local.service
+    echo "Installed wxstation.service systemd-unit"
     systemctl daemon-reload
     systemctl enable rc-local.service
+    else
+        echo "Unable to install wxstation.service, directory /usr/lib/systemd/system does not exist"
+    fi
 }
 rclocal_setup() {
     echo -e "echo none > /sys/class/leds/led0/trigger\n\
@@ -158,6 +179,7 @@ else
     install_pkgs
     setup_db
     disable_leds
+    systemd_setup
     echo "All done!"
 fi
 exit 0

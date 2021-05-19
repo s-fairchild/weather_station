@@ -1,1 +1,0 @@
-/bin/bash -c "source setup_settings.env; exec /bin/bash main.sh ${1}"

@@ -2,7 +2,6 @@
 bme280_addr : 0x77
 # Tipping bucket size
 bucket_size : 0.2794
-tcpip : True
 db_host : 127.0.0.1
 db_pass : password
 loglevel : INFO

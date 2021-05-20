@@ -13,14 +13,14 @@ class SendAprs:
         if num is not None:
             if num < 100 and num > 9: # Add 0 in front if temperature is between 0 and 99
                 return f"0{num}"
-            elif num < 9 and num >= 0: # add 00 in front if between 0 and 9
+            elif num <= 9 and num >= 0: # add 00 in front if between 0 and 9
                 return f"00{num}"
-            elif num < 0 and num > -9:
+            elif num < 0 and num >= -9:
                 return f"-0{abs(num)}"
             elif num < -9:
                 return f"-{abs(num)}"
             else:
-                return num
+                return str(num)
         else:
             return "000"
 
@@ -34,12 +34,16 @@ class SendAprs:
 
     # Humidity must be 2 digits. If humidity is 100% assign value of 00
     def format_humidity(self, num):
-        if num == 100:
+        if num > 100:
+            raise ValueError(f"Humidity measurement was: {num}\nHumidity cannot be greater than 100. Check/calibrate, or replace humidity sensor.")
+        elif num < 0:
+            raise ValueError(f"Humidity measurement was: {num}\nHumidity cannot be less than 0. Check/calibrate, or replace humidity sensor.")
+        elif num == 100:
             return "00"
         elif num <= 9:
-            return self.add_zeros(num)
+            return f"0{num}"
         else:
-            return num
+            return str(num)
 
     def make_packet(self, data, config):
         tmp = data.copy() # Create copy so that original data dictionary is not modified
@@ -67,12 +71,12 @@ class SendAprs:
         packet = self.make_packet(data, config)
         if config['aprs']['sendall']:
             for server in config['aprs']['servers']:
-                AIS = aprslib.IS(config['aprs']['callsign'], config['aprs']['passwd'], config['aprs']['servers'][server], config['aprs']['port'])
+                AIS = aprslib.IS(config['aprs']['callsign'], str(config['aprs']['passwd']), config['aprs']['servers'][server], config['aprs']['port'])
                 try:
                     AIS.connect()
                     AIS.sendall(packet)
                     print(f"Packet transmitted to {config['aprs']['servers'][server]} at {time.strftime('%Y-%m-%d %H:%M', time.gmtime())} UTC time")
-                    break
+                    #break
                 except Exception as e:
                     print(f"An exception occured trying to send packet to {server}\nException: {e}")
                 finally:

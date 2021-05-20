@@ -4,25 +4,27 @@
 
 # Print usage message
 usage() {
-    printf "Script usage\n\t--database-only - Setup database only\n\t--pkgs-only - Install debian and python packages only\n\t --help - Print this message\n"
+    echo -e "Script usage\n\
+    \t--database-only - Setup database only\n\
+    \t--pkgs-only - Install debian and python packages only\n\
+    \t--skip-database - Skip database install and setup\n\
+    \t--help - Print this message\n"
 }
 
 red="\033[0;31m"
 creset="\033[0m"
 
-if [[ "$(whoami)" != "root" ]]; then
-    echo -e "\n${red}This script must be ran as root user or with sudo!"
-    echo -e "Exiting...\n${creset}"
-    usage
-    exit 0
-else
-    clear
-fi
-if [[ -f setup_settings.env ]]; then
-    source setup_settings.env
-else
-    echo -e "setup_settings not found.\nAre you in the setup directory?\nExiting"; exit 1
-fi
+check_root() {
+    if [[ "$(whoami)" != "root" ]]; then
+        echo -e "\n${red}This script must be ran as root user or with sudo!"
+        echo -e "Exiting...\n${creset}"
+        usage
+        exit 0
+    else
+        clear
+    fi
+}
+
 # Create user service account and service
 create_user() {
     grep ${service_account} /etc/passwd > /dev/null
@@ -174,35 +176,58 @@ copy_files() {
     mkdir -p ${service_dir}
     if [[ -d ${service_dir} ]]; then
         cp ./*.py ${service_dir}
-        cp ./wxstation.yaml ${service_dir}
+        if [[ -f "${service_dir}/wxstation.yaml" ]]; then
+            mv ${service_dir}/wxstation.yaml ${service_dir}/wxstation.yaml.save
+            echo -e "${service_dir}/wxstation.yaml already exists, \
+            creating backup at ${service_dir}/wxstation.yaml.save\n\
+            Copy custom settings as needed."
+        cp ./wxstation.yaml ${service_dir}/
         chown -R ${service_account}:${service_account} ${service_dir}
         cd -
+    fi
     else
         echo "Unable to copy files to ${service_dir}, directory does not exist."
     fi
 }
 
-if [[ ! -z $1 ]]; then
-    if [[ "$1" == "--database-only" ]]; then
-        echo "Setting up database only!"
-        setup_db
-        echo "Done setting up database!"
-        exit 0
-    elif [[ "$1" == "--pkgs-only" ]]; then
-        install_pkgs
-        echo "Done installing packages!"
-        echo "Exiting!"
-        exit 0
+main() {
+    if [[ -f setup_settings.env ]]; then
+        source setup_settings.env
     else
-        usage
+        echo -e "setup_settings not found.\nAre you in the setup directory?\nExiting"; exit 1
     fi
-else
-    create_user
-    install_pkgs
-    setup_db
-    disable_leds
-    systemd_setup
-    copy_files
-    echo "All done!"
-fi
+
+    if [[ ! -z "${1}" ]] && [[ "${1}" != "--skip-database" ]]; then
+        if [[ "${1}" == "--database-only" ]]; then
+            echo "Setting up database only!"
+            setup_db
+            echo "Done setting up database!"
+            exit 0
+        elif [[ "${1}" == "--pkgs-only" ]]; then
+            install_pkgs
+            echo "Done installing packages!"
+            echo "Exiting!"
+            exit 0
+        else
+            usage
+        fi
+    else
+        create_user
+        if [[ "${1}" != "--skip-database" ]]; then
+            install_pkgs
+            setup_db
+        else
+            echo "Skipping database install and setup"
+            export deb_pkgs=$(echo ${deb_pkgs} | sed 's/mariadb-server //g')
+            install_pkgs
+        fi
+        disable_leds
+        systemd_setup
+        copy_files
+        echo "All done!"
+    fi
+}
+
+check_root
+main "${1}"
 exit 0

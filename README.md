@@ -18,9 +18,3 @@ Currently developed for [Raspberry Pi OS lite](https://www.raspberrypi.org/softw
 1. [UCTRONICS IEEE 802.3af Micro USB Active PoE Splitter Power Over Ethernet 48V to 5V 2.4A for Tablets, Dropcam or Raspberry Pi (48V to 5V 2.4A)](https://www.amazon.com/gp/product/B01MDLUSE7/ref=ppx_yo_dt_b_asin_title_o03_s02?ie=UTF8&psc=1)
 1. [SunFounder Power Supply Module for Raspberry Pi UPS with Recharging Function 5V/3A Lithium Battery Power Pack Expansion Board for Raspberry Pi 4B 3B+ 3B/2B and 1 Model B+](https://www.amazon.com/gp/product/B08HLXGS3W/ref=ppx_yo_dt_b_asin_title_o01_s00?ie=UTF8&psc=1)
 	* It maybe possible to run completely from battery power and a solar panel. However power optimizations, two 3000 or 3500 mHA batteries, a large solar panel, and a Raspberry pi zero would be ideal for this.
-
-### Primary Packages Used
-* [bme280pi](https://pypi.org/project/bme280pi/)
-* [aprslib](https://pypi.org/project/aprslib/)
-* pyserial
-* sqlite3

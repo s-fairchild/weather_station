@@ -2,8 +2,6 @@ from gpiozero import Button
 from threading import Lock
 from time import sleep
 
-
-
 class RainMonitor:
     """ DEFAULT_RAIN_SENSOR = Button(5)
         BUCKET_SIZE = 0.2794 # mm

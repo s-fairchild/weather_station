@@ -147,7 +147,6 @@ if __name__=="__main__":
             data['pm25_avg'], data['pm10_avg'] = air_monitor.average()
             air_monitor.air_values['pm25_total'].clear(); air_monitor.air_values['pm10_total'].clear() # Reset readings used for averages
 
-
         if 'fm_transmitter' in locals():            
             th_fm_transmit= th.Thread(target=fm_transmitter.manage_soundfile(aprs.make_packet(data, config)))
 

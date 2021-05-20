@@ -63,7 +63,7 @@ def gen_random_data():
     r = random()
     data['wdir'] = randint(0, 364)
     data['pressure'] = randint(900, 1000) + randint(100, 200) * r # shift decimal point to the left 1 and round
-    data['temperature'] = randint(-99, 120)
+    data['temperature'] = randint(-32, 120)
     data['wspeed'] = randint(0, 100)
     data['wgusts'] = data['wspeed'] + randint(0, 10)
     data['humidity'] = randint(0, 100)
@@ -147,28 +147,17 @@ if __name__=="__main__":
             data['pm25_avg'], data['pm10_avg'] = air_monitor.average()
             air_monitor.air_values['pm25_total'].clear(); air_monitor.air_values['pm10_total'].clear() # Reset readings used for averages
 
-        if config['tcpip']:
-            th_senddata_tcpip = th.Thread(target=aprs.send_data(data, config))
 
         if 'fm_transmitter' in locals():            
             th_fm_transmit= th.Thread(target=fm_transmitter.manage_soundfile(aprs.make_packet(data, config)))
 
+        th_makepacket = th.Thread(target=aprs.send_data(data, config))
         th_sensorsave = th.Thread(target=db.read_save_sensors(data))
-        if 'th_senddata_tcpip' in locals():
-            th_senddata_tcpip.start()
-        else:
-            packet = aprs.make_packet(data, config)
-            th_packetsave = th.Thread(target=db.read_save_packet(packet[:-len(config['aprs']['comment'])], 0))
-            th_packetsave
             
-        th_sensorsave.start()
+        th_sensorsave.start(); th_makepacket.start()
         if 'fm_transmitter' in locals():
             th_fm_transmit.start()
-        if 'th_senddata_tcpip' in locals():
-            th_senddata_tcpip.join()
-        else:
-            th_packetsave.join()
         if 'fm_transmitter' in locals():
             th_fm_transmit.join()
-        th_sensorsave.join()
+        th_sensorsave.join(); th_makepacket.join()
         wait_delay(start_time, config['report_interval'])

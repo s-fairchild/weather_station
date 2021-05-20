@@ -33,17 +33,15 @@ create_user() {
 }
 
 install_pkgs() {
-    local debpkgs=('mariadb-server' 'libmariadb3' 'libmariadb-dev')
-    local pypkgs=('mariadb' 'bme280pi' 'gpiozero' 'pyserial' 'aprslib' 'py-sds011' 'PyYaml')
-    echo "Installing required database packages and connector"
-    for pkg in ${debpkgs[@]}; do    
-        apt install ${pkg} -y
-        echo ${pkg}
-    done
-    echo "Installing python packages..."
-    for pkg in ${pypkgs[@]}; do
-        pip3 install ${pkg}
-    done
+    echo "Attempting to install required packages now"
+    if [[ ! -z ${deb_pkgs} ]]; then
+        echo "Installing debian packages..."
+        apt install ${deb_pkgs} -y
+    fi
+    if [[ ! -z ${py_pkgs} ]]; then
+        echo "Installing python packages..."
+        pip3 install ${py_pkgs}
+    fi
 }
 
 # Create and setup mariadb

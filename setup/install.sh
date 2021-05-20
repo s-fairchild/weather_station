@@ -92,9 +92,9 @@ After=network.target\n\
 [Service]\n\
 Type=simple\n\
 User=wxstation\n\
-WorkingDirectory=/opt/wxstation/bin\n\
-Environment=PYTHONPATH=/opt/wxstation/bin\n\
-ExecStart=/usr/bin/python3 -u /opt/wxstation/bin/main.py\n\
+WorkingDirectory=${service_dir}/bin\n\
+Environment=PYTHONPATH=${service_dir}/bin\n\
+ExecStart=/usr/bin/python3 -u ${service_dir}/bin/main.py\n\
 Restart=on-failure\n\
 
 [Install]\n\
@@ -169,6 +169,19 @@ disable_leds() {
     fi
 }
 
+copy_files() {
+    cd ..
+    mkdir -p ${service_dir}
+    if [[ -d ${service_dir} ]]; then
+        cp ./*.py ${service_dir}
+        cp ./wxstation.yaml ${service_dir}
+        chown -R ${service_account}:${service_account} ${service_dir}
+        cd -
+    else
+        echo "Unable to copy files to ${service_dir}, directory does not exist."
+    fi
+}
+
 if [[ ! -z $1 ]]; then
     if [[ "$1" == "--database-only" ]]; then
         echo "Setting up database only!"
@@ -189,6 +202,7 @@ else
     setup_db
     disable_leds
     systemd_setup
+    copy_files
     echo "All done!"
 fi
 exit 0

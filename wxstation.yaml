@@ -6,7 +6,7 @@ tcpip : True
 db_host : 127.0.0.1
 db_pass : password
 loglevel : INFO
-report_interval : 10 # Interval to take reports in seconds
+report_interval : 300 # Interval to take reports in seconds
 
 sensors:
   bme280 : True
@@ -41,26 +41,26 @@ sds011:
 aprs:
   # optional port 23
   port : 14580
-  passwd : -1
+  passwd : "-1"
   # Set to station ID
   callsign : NOCALL
-  # bool value, 1/0, yes/no, true/false
-  sendall : False
-  longitude : ...
-  latitude : ...
+  sendall : True
+  longitude : 0000.00N
+  # Latitude must have a leading 0
+  latitude : 00000.00W
   comment : RPIWxstationV1
   loglevel : INFO
-  # all cwop servers - - - cwop.aprs.net : port 14580 or port 23 - - - this links to all four CWOP servers.
-  server_pool : cwop.aprs.net
-  servers : {
+  servers : { # Only use server pool for CWOP usage - other servers will fail.
+    # all cwop servers - - - cwop.aprs.net : port 14580 or port 23 - - - this links to all four CWOP servers.
+    pool : cwop.aprs.net
     # Gerry Creager, N5JXS - - - Norman, Oklahoma 
-    server1 : cwop1.ou.edu,
+    #server1 : cwop1.ou.edu,
     # Jim Fuller, N7VR - - - Billings, Montana 
-    server2 : cwop.fuller.net,
+    #server2 : cwop.fuller.net,
     # John Ronan, EI7IG - - - Waterford, Ireland 
-    server3 : cwop.tssg.org,
+    #server3 : cwop.tssg.org,
     # Gerry Creager, N5JXS - - - Norman, Oklahoma 
-    server4 : cwop2.ou.edu
+    #server4 : cwop2.ou.edu
   }
 
 dev_mode: False

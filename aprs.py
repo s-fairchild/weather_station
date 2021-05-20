@@ -11,7 +11,9 @@ class SendAprs:
     # Convert temperature, wind direction, wind speed, and wind gusts to 3 digits
     def add_zeros(self, num):
         if num is not None:
-            if num < 100 and num > 9: # Add 0 in front if temperature is between 0 and 99
+            if num < -99 or num > 999:
+                raise ValueError(f"Temperature measurement was: {num}\nTemperature cannot be less than -99 or greater than 999")            
+            elif num < 100 and num > 9: # Add 0 in front if temperature is between 0 and 99
                 return f"0{num}"
             elif num <= 9 and num >= 0: # add 00 in front if between 0 and 9
                 return f"00{num}"

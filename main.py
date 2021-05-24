@@ -21,9 +21,9 @@ data = {
     'humidity' : 0
 }
 
-def start_bme280():
+def start_bme280(address=0x77):
     try:
-        sensor = Sensor(0x77)
+        sensor = Sensor(address)
     except Exception as e:
         print(f"Exception occured while setting bme280 to address 0x77: {e}\nTrying address 0x76")
         sensor = Sensor(0x76)
@@ -74,10 +74,9 @@ if __name__=="__main__":
     config = parse_config('wxstation.yaml')
     db = WeatherDatabase(password=config['db_pass'],host=config['db_host'])
     aprs = SendAprs(db, config['loglevel'])
-    if config['sensors']['bme280'] and config['dev_mode'] is False:
-        print(f"{config['sensors']['bme280']}")        
+    if config['sensors']['bme280'] and config['dev_mode'] is False:      
         from bme280pi import Sensor
-        sensor = start_bme280()
+        sensor = start_bme280(config['bme280_addr'])
     if config['sensors']['rain1h'] and config['dev_mode'] is False:
         from rainfall import RainMonitor
         rmonitor = RainMonitor()

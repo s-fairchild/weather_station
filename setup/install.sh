@@ -171,6 +171,23 @@ disable_leds() {
     fi
 }
 
+enable_extra_i2c() {
+    config_line="dtoverlay=i2c-gpio,bus=2,i2c_gpio_sda=22,i2c_gpio_scl=23"
+    grep "${config_line}" /boot/config.txt > /dev/null
+    if [[ "${?}" != 0 ]]; then
+        if [[ -f "${configtxt_loc}" ]]; then
+            echo "Backing up ${configtxt_loc}"
+            cp "${configtxt_loc}" "${configtxt_loc}"-$(date +%F).bak
+            echo "Modifying ${configtxt_loc} to enable additional i2c port on boot"
+            echo "dtoverlay=i2c-gpio,bus=2,i2c_gpio_sda=22,i2c_gpio_scl=23" >> "${configtxt_loc}"
+            if [[ -f $(which dtoverlay) ]]; then
+                echo "Enabling additional i2c port now, no need to reboot"
+                dtoverlay i2c-gpio bus=2 i2c_gpio_sda=22 i2c_gpio_scl=23
+            fi
+        fi
+    fi
+}
+
 copy_files() {
     cd ..
     mkdir -p ${service_dir}
@@ -221,6 +238,7 @@ main() {
             export deb_pkgs=$(echo ${deb_pkgs} | sed 's/mariadb-server //g')
             install_pkgs
         fi
+        #enable_extra_i2c
         disable_leds
         systemd_setup
         copy_files

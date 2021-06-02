@@ -47,11 +47,12 @@ def reload_i2c(message):
 
 def wait_delay(start_time, interval):
         end_time = time() # Capture end time
-        wait_time = round(interval - (end_time - start_time)) # Calculate time to wait before restart loop
+        elapsed_time = end_time - start_time
+        wait_time = round(interval - elapsed_time, 2) # Calculate time to wait before restart loop
         if wait_time < 0:
-            abs(wait_time)
-        elif wait_time == 0:
-            wait_time = interval
+            print(f"WARNING: Minutes past since last report: {round(elapsed_time / 60, 2)}\n\
+                This is longer than the interval period of {interval / 60} minutes.")
+            wait_time = 0
         print(f"Generating next report in {round((wait_time / 60), 2)} minutes")
         stdout.flush(); sleep(wait_time) # Flush buffered output and wait exactly 5 minutes from start time
 

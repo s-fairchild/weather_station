@@ -28,9 +28,7 @@ def start_bme280(address=0x77):
             sensor = Sensor(address)
             break
         except Exception as e:
-            print(f"Exception occured, {e}\nReloading i2c kernel modules")
-            stream = popen("modprobe -r i2c-dev; modprobe i2c-dev")
-            print(stream.readline())
+            reload_i2c(e)
             continue
 
     try:
@@ -39,6 +37,13 @@ def start_bme280(address=0x77):
     except Exception as e:
         print(f"{e}: Unable to get BME280 ChipID and Version")
     return sensor
+
+def reload_i2c(message):
+    print(f"Exception occured, {message}\nReloading i2c kernel modules")
+    stream = popen("modprobe -r i2c-dev; modprobe i2c-dev")
+    output = stream.readline()
+    if output != "":
+        print(output)
 
 def wait_delay(start_time, interval):
         end_time = time() # Capture end time
@@ -125,9 +130,15 @@ if __name__=="__main__":
             th_sds011.start()
 
         if 'sensor' in locals():
-            data['temperature'] = sensor.get_temperature(unit='F')
-            data['pressure'] = sensor.get_pressure()
-            data['humidity'] = sensor.get_humidity()
+            while True:
+                try:
+                    data['temperature'] = sensor.get_temperature(unit='F')
+                    data['pressure'] = sensor.get_pressure()
+                    data['humidity'] = sensor.get_humidity()
+                    break
+                except Exception as e:
+                    reload_i2c(e)
+                    continue
 
         if 'th_wmonitor' and 'th_wspeed' in locals():
             if len(wmonitor.wind_list) > 0:

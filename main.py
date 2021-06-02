@@ -4,6 +4,7 @@ from time import sleep, time
 from db import WeatherDatabase
 from aprs import SendAprs
 from yaml import safe_load
+from os import popen
 
 data = {
     'callsign': "",
@@ -22,11 +23,16 @@ data = {
 }
 
 def start_bme280(address=0x77):
-    try:
-        sensor = Sensor(address)
-    except Exception as e:
-        print(f"Exception occured while setting bme280 to address 0x77: {e}\nTrying address 0x76")
-        sensor = Sensor(0x76)
+    while True:
+        try:
+            sensor = Sensor(address)
+            break
+        except Exception as e:
+            print(f"Exception occured, {e}\nReloading i2c kernel modules")
+            stream = popen("modprobe -r i2c-dev; modprobe i2c-dev")
+            print(stream.readline())
+            continue
+
     try:
         chipid, version = sensor._get_info_about_sensor()
         print(f"BME280 Information:\n\tChipID: {chipid}\n\tVersion: {version}")

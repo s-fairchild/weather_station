@@ -39,11 +39,13 @@ def start_bme280(address=0x77):
     return sensor
 
 def reload_i2c(message):
-    print(f"Exception occured, {message}\nReloading i2c kernel modules")
-    stream = popen("modprobe -r i2c-dev; modprobe i2c-dev")
-    output = stream.readline()
-    if output != "":
-        print(output)
+    print(f"Exception occured, {message}\nReloading i2c-dev and i2c_bcm2835 kernel modules")
+    stream = popen("sudo modprobe -r i2c-dev; sudo modprobe i2c-dev; sudo modprobe -r i2c_bcm2835; sudo modprobe i2c_bcm2835")
+    output = stream.readlines()
+    if len(output) > 0:
+        print("Messages from operating system while reloading i2c modules...")
+        for line in output:
+            print(line)
 
 def wait_delay(start_time, interval):
         end_time = time() # Capture end time

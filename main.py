@@ -140,7 +140,9 @@ if __name__=="__main__":
                     data['humidity'] = sensor.get_humidity()
                     break
                 except Exception as e:
+                    del(sensor)
                     reload_i2c(e)
+                    sensor = start_bme280(config['bme280_addr'])
                     continue
 
         if 'th_wmonitor' and 'th_wspeed' in locals():

@@ -19,7 +19,7 @@ check_root() {
         echo -e "\n${red}This script must be ran as root user or with sudo!"
         echo -e "Exiting...\n${creset}"
         usage
-        exit 0
+        exit 1
     else
         clear
     fi
@@ -29,8 +29,19 @@ check_root() {
 create_user() {
     grep ${service_account} /etc/passwd > /dev/null
     if [[ "$?" != "0" ]]; then
+        echo "Creating wxstation service account"
         useradd -m -d ${service_dir} -c "wxstation service account" -r ${service_account}
         usermod -aG ${service_groups} ${service_account}
+    fi
+    if [[ -d /etc/sudoers.d ]]; then
+        echo "Assigning wxstation user account sudo privilges to load and unload i2c-dev and i2c_bcm2835"
+        echo "If you are running a Raspberry Pi model that uses a different driver, edit /etc/sudoers.d/wxstation to modify the kernel module"    
+        echo -e "wxstation ALL=(ALL) NOPASSWD: /sbin/modprobe i2c-dev\n\
+                wxstation ALL=(ALL) NOPASSWD: /sbin/modprobe -r i2c-dev\n\
+                wxstation ALL=(ALL) NOPASSWD: /sbin/modprobe i2c_bcm2835\n\
+                wxstation ALL=(ALL) NOPASSWD: /sbin/modprobe -r i2c_bcm2835\
+                " > /etc/sudoers.d/wxstation
+        chmod 0400 /etc/sudoers.d/wxstation
     fi
 }
 

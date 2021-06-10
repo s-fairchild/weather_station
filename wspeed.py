@@ -22,6 +22,8 @@ class WindMonitor:
             with self.wind_count_lock and self.wind_list_lock:
                 if self.wind_count > 0:
                     delay += extra_delay
+                    if extra_delay > 0:
+                        extra_delay = 0
                     radius_cm = 9.0
                     cm_in_mile = 160934.4
                     circumference_cm = (2 * pi) * radius_cm

@@ -119,9 +119,6 @@ if __name__=="__main__":
             air_monitor = MonitorAirQuality(tty=config['sds011']['tty'], interval=config['sds011']['interval'])
         else:
             air_monitor = MonitorAirQuality(interval=config['sds011']['interval'])
-    if config['sensors']['si4713'] and config['dev_mode'] is False:
-        from si4713 import FM_Transmitter
-        fm_transmitter = FM_Transmitter()
     print("Done reading config file.\nStarting main program now.")
 
     while True:
@@ -168,16 +165,9 @@ if __name__=="__main__":
             data['pm25_avg'], data['pm10_avg'] = air_monitor.average()
             air_monitor.air_values['pm25_total'].clear(); air_monitor.air_values['pm10_total'].clear() # Reset readings used for averages
 
-        if 'fm_transmitter' in locals():            
-            th_fm_transmit= th.Thread(target=fm_transmitter.manage_soundfile(aprs.make_packet(data, config)))
-
         th_makepacket = th.Thread(target=aprs.send_data(data, config))
         th_sensorsave = th.Thread(target=db.read_save_sensors(data))
             
         th_sensorsave.start(); th_makepacket.start()
-        if 'fm_transmitter' in locals():
-            th_fm_transmit.start()
-        if 'fm_transmitter' in locals():
-            th_fm_transmit.join()
         th_sensorsave.join(); th_makepacket.join()
         wait_delay(start_time, config['report_interval'])

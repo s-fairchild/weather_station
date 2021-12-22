@@ -78,11 +78,7 @@ class SendAprs:
                     AIS.connect()
                     AIS.sendall(packet)
                     print(f"Packet transmitted to {config['aprs']['servers'][server]} at {time.strftime('%Y-%m-%d %H:%M', time.gmtime())} UTC time")
-                    #break
                 except Exception as e:
                     print(f"An exception occured trying to send packet to {server}\nException: {e}")
                 finally:
                     AIS.close()
-            transmitted = 1
-        else:
-            transmitted = 0

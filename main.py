@@ -28,24 +28,17 @@ def start_bme280(address=0x77):
             sensor = Sensor(address)
             break
         except Exception as e:
-            reload_i2c(e)
+            print(f"Exception occured, {e}\nMaybe try reloading i2c-dev and i2c_bcm2835 kernel modules?")
+            print(f"Waiting 10 seconds before retrying...")
+            sleep(10)
+            print(f"Trying to start bme280 again.")
             continue
-
     try:
         chipid, version = sensor._get_info_about_sensor()
         print(f"BME280 Information:\n\tChipID: {chipid}\n\tVersion: {version}")
     except Exception as e:
         print(f"{e}: Unable to get BME280 ChipID and Version")
     return sensor
-
-def reload_i2c(message):
-    print(f"Exception occured, {message}\nReloading i2c-dev and i2c_bcm2835 kernel modules")
-    stream = popen("sudo modprobe -r i2c-dev; sudo modprobe i2c-dev; sudo modprobe -r i2c_bcm2835; sudo modprobe i2c_bcm2835")
-    output = stream.readlines()
-    if len(output) > 0:
-        print("Messages from operating system while reloading i2c modules...")
-        for line in output:
-            print(line)
 
 def wait_delay(start_time, interval):
         end_time = time() # Capture end time

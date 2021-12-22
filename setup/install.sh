@@ -88,13 +88,6 @@ setup_db() {
             air_pressure DECIMAL(6,2) NOT NULL,\
             PM25 DECIMAL(6,2),\
             PM10 DECIMAL(6,2));"
-
-    echo "Creating packet table in ${db_name} database"
-    mysql -e "CREATE TABLE IF NOT EXISTS ${db_name}.packets(\
-            ID BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT,\
-            created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\
-            packet VARCHAR(82) NOT NULL,\
-            transmitted BOOL NOT NULL);"
 }
 systemd_setup() {
     if [[ -d /usr/lib/systemd/system ]]; then

@@ -86,4 +86,3 @@ class SendAprs:
             transmitted = 1
         else:
             transmitted = 0
-        self.db.read_save_packet(packet[:-len(config['aprs']['comment'])], transmitted) # Store packet in database without comment field

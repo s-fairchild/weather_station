@@ -41,15 +41,6 @@ class WeatherDatabase:
         cur.execute(sensors_insert, data_tuple)
         self.conn.commit(); self.conn.close()
 
-    def read_save_packet(self, packet, transmitted):
-        packet_insert = """INSERT INTO packets(packet, transmitted) 
-        VALUES(?, ?);"""
-        data_tuple = (packet, transmitted)
-        conn = self.db_connect()
-        cur = conn.cursor()
-        cur.execute(packet_insert, data_tuple)
-        conn.commit(); conn.close()
-
     def rain_avg(self, hours): # valid arguements are 00 for since midnight, 1 for past hour, 24 for past 24 hours
         if hours == 00: # Queries average rainfall between now and 00:00 of today
             query = """SELECT AVG(rainfall) FROM sensors where created between CURRENT_DATE() AND NOW() AND rainfall!=0;"""

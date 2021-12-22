@@ -3,6 +3,7 @@ from time import sleep
 
 class WeatherDatabase:
     def __init__(self, user="wxstation", password="password", host="127.0.0.1", port=3306, database="weather"):
+        # Set custom options if given, use defaults if not
         self.user = user
         self.password = password
         self.host = host
@@ -11,7 +12,6 @@ class WeatherDatabase:
 
     def db_connect(self):
         for i in range(1, 4): # Retry 3 times increasing delay by 10 seconds each time
-            delay = i * 10
             try:
                 conn = db.connect(
                     user = self.user,
@@ -22,16 +22,22 @@ class WeatherDatabase:
                 )
                 return conn
             except db.Error as e:
+                # Increase delay by 10 seconds
+                delay = i * 10
                 print(f"Error connecting to MariaDB Server: {e}\n\t Retry number {i}\n\t Retrying in {delay} seconds...")
                 sleep(delay)
                 continue
 
     def read_save_sensors(self, data):
+        # Create query to insert data into database
         sensors_insert = """INSERT INTO sensors(stationid, ambient_temperature, wind_direction, wind_speed, wind_gust_speed, humidity, air_pressure, rainfall, pm25, pm10) 
         VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?);"""
+        # Create tuple to combine with insert statement
         data_tuple = (data['callsign'], data['temperature'], data['wdir'], data['wspeed'], data['wgusts'], data['humidity'], round(data['pressure'], 2), data['rainfall'], data['pm25_avg'], data['pm10_avg'])
+        # Connect to database
         self.conn = self.db_connect()
         cur = self.conn.cursor()
+        # Execute insert statement
         cur.execute(sensors_insert, data_tuple)
         self.conn.commit(); self.conn.close()
 

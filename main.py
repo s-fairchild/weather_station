@@ -53,16 +53,16 @@ def wait_delay(start_time, interval):
 
 def parse_config(config_file):
     try:
-        print("Reading fand.yaml.")
+        print(f"Reading {config_file}.")
         with open(config_file, 'r') as file:
             config = safe_load(file)
-        print("Successfully read fand.yaml.")
         if len(config) != 0:
+            print(f"Successfully loaded {config_file}.")
             return config
         else:
-            print(f"config file loaded with 0 length, somethings wrong.")
+            print(f"{config_file} file loaded with 0 length, somethings wrong.")
     except Exception as e:
-        print(f"Could not read fand.yaml, {e}")
+        print(f"Could not read {config_file}, {e}")
 
 def gen_random_data():
     from random import randint, random

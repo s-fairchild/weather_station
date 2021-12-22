@@ -79,12 +79,18 @@ def gen_random_data():
 if __name__=="__main__":
     print("Reading 'wxstation.yaml'")
     config = parse_config('wxstation.yaml')
+    # Create database object
     db = WeatherDatabase(password=config['db_pass'],host=config['db_host'])
+    # Create aprs object
     aprs = SendAprs(db, config['loglevel'])
+
+    # If dev mode is disabled, enable sensors and import packages as needed
     if config['dev_mode'] is False:
+        # Create bme280 object if enabled        
         if config['sensors']['bme280']:      
             from bme280pi import Sensor
             sensor = start_bme280(config['bme280_addr'])
+        # Create bme280 object if enabled
         if config['sensors']['rain1h']:
             from rainfall import RainMonitor
             rmonitor = RainMonitor()
@@ -131,8 +137,6 @@ if __name__=="__main__":
                     data['humidity'] = sensor.get_humidity()
                     break
                 except Exception as e:
-                    del(sensor)
-                    reload_i2c(e)
                     sensor = start_bme280(config['bme280_addr'])
                     continue
 

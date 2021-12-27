@@ -36,11 +36,12 @@ class WeatherDatabase:
         # Create tuple to combine with insert statement
         data_tuple = (data['callsign'], data['temperature'], data['wdir'], data['wspeed'], data['wgusts'], data['humidity'], round(data['pressure'], 2), data['rainfall'], data['pm25_avg'], data['pm10_avg'])
         # Connect to database
-        self.conn = self.db_connect()
-        cur = self.conn.cursor()
+        conn = self.db_connect()
+        cur = conn.cursor()
         # Execute insert statement
         cur.execute(sensors_insert, data_tuple)
-        self.conn.commit(); self.conn.close()
+        conn.commit()
+        conn.close()
 
     def rain_avg(self, hours): # valid arguements are 00 for since midnight, 1 for past hour, 24 for past 24 hours
         if hours == 00: # Queries average rainfall between now and 00:00 of today
@@ -54,13 +55,18 @@ class WeatherDatabase:
         cur.execute(query)
         row = cur.fetchone()
         if row[0] is None:
+            logging.debug(f"Query returned None: {query}")
             query = """SELECT rainfall FROM sensors ORDER BY id DESC LIMIT 1;"""
+            logging.debug(f"Running Query: {query}")
             cur.execute(query)
             latest = cur.fetchone()
-            if latest is not None:
-                return latest[0]
-        conn.close()
-        return 0.0 if row[0] is None else row[0] # Rainfall readings of 0.000 will return NULL, return 0 if NULL
+            conn.close()
+            logging.debug(f"Returned: {latest[0]}")
+            return latest[0]
+        else:
+            conn.close()
+            logging.debug(f"Query successful: {query}\nReturned row: {row[0]}")
+            return row[0] # Rainfall readings of 0.000 will return NULL, return 0 if NULL
 
     def get_all_rain_avg(self):
         all_rain_avgs = {}

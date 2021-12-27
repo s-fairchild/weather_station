@@ -1,5 +1,5 @@
 from statistics import mean
-import aprs, logging, threading as th
+import logging, threading as th
 from time import sleep, time
 from db import WeatherDatabase
 from aprs import SendAprs

@@ -1,6 +1,7 @@
 from gpiozero import Button
 from threading import Lock
 from time import sleep
+import logging
 
 class RainMonitor:
     """ DEFAULT_RAIN_SENSOR = Button(5)
@@ -17,12 +18,12 @@ class RainMonitor:
             if not self.tips_lock.locked():
                 self.tips_lock.acquire()
                 self.tips += 1
-                #print(f"Bucket tipped! Total rainfall calculated is {self.tips * self.bucket_size}")
-                #TODO set above print statement as debug log level
+                logging.debug(f"Bucket tipped! Total rainfall calculated is {self.tips * self.bucket_size}")
                 self.tips_lock.release()
                 break
-
-    def total_rain(self): # Convert tips to rain in hundreths of an inch and reset tips counter
+            
+    # Convert tips to rain in hundreths of an inch and reset tips counter
+    def total_rain(self):
         return self.tips * self.bucket_size
 
     def clear_total_rain(self):

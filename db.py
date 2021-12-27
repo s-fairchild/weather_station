@@ -1,5 +1,6 @@
 import mariadb as db
 from time import sleep
+import logging
 
 class WeatherDatabase:
     def __init__(self, user="wxstation", password="password", host="127.0.0.1", port=3306, database="weather"):
@@ -24,7 +25,7 @@ class WeatherDatabase:
             except db.Error as e:
                 # Increase delay by 10 seconds
                 delay = i * 10
-                print(f"Error connecting to MariaDB Server: {e}\n\t Retry number {i}\n\t Retrying in {delay} seconds...")
+                logging.critical(f"Error connecting to MariaDB Server: {e}\n\t Retry number {i}\n\t Retrying in {delay} seconds...")
                 sleep(delay)
                 continue
 
@@ -65,4 +66,8 @@ class WeatherDatabase:
         all_rain_avgs = {}
         for hour in [ '00', '1', '24' ]:
             all_rain_avgs[hour] = self.rain_avg(hour)
+        logging.debug("\n\nRain averages collected:")
+        logging.debug(f"Rain from now to 00:00: {all_rain_avgs['00']}")
+        logging.debug(f"Rain from the past hour: {all_rain_avgs['1']}")
+        logging.debug(f"Rain from the past 24 hours: {all_rain_avgs['24']}\n")
         return all_rain_avgs

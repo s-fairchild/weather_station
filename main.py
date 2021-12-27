@@ -1,11 +1,9 @@
 from statistics import mean
-from sys import stdout
-import aprs, threading as th
+import aprs, logging, threading as th
 from time import sleep, time
 from db import WeatherDatabase
 from aprs import SendAprs
 from yaml import safe_load
-import logging
 
 data = {
     'callsign': "",
@@ -31,9 +29,9 @@ def start_bme280(address=0x76):
             break
         except Exception as e:
             logging.critical(f"Exception occured, {e}\nMaybe try reloading i2c-dev and i2c_bcm2835 kernel modules?")
-            logging.debug(f"Waiting 10 seconds before retrying...")
+            logging.error(f"Waiting 10 seconds before retrying...")
             sleep(10)
-            logging.debug(f"Trying to start bme280 again.")
+            logging.error(f"Trying to start bme280 again.")
             continue
     try:
         chipid, version = sensor._get_info_about_sensor()
@@ -47,26 +45,24 @@ def wait_delay(start_time, interval):
         elapsed_time = end_time - start_time
         wait_time = round(interval - elapsed_time, 2) # Calculate time to wait before restart loop
         if wait_time < 0:
-            print(f"WARNING: Minutes past since last report: {round(elapsed_time / 60, 2)}\n\
+            logging.error(f"WARNING: Minutes past since last report: {round(elapsed_time / 60, 2)}\n\
                 This is longer than the interval period of {interval / 60} minutes.")
             wait_time = 0
-        print(f"Generating next report in {round((wait_time / 60), 2)} minutes")
-        # Print any cached lines to screen now
-        stdout.flush()
+        logging.info(f"Generating next report in {round((wait_time / 60), 2)} minutes")
         sleep(wait_time) # Flush buffered output and wait for seconds in wxstation.yaml report_interval:
 
 def parse_config(config_file):
     try:
-        print(f"Reading {config_file}.")
+        logging.info(f"Reading {config_file}.")
         with open(config_file, 'r') as file:
             config = safe_load(file)
         if len(config) != 0:
-            print(f"Successfully loaded {config_file}.")
+            logging.info(f"Successfully loaded {config_file}.")
             return config
         else:
-            print(f"{config_file} file loaded with 0 length, somethings wrong.")
+            logging.error(f"{config_file} file loaded with 0 length, somethings wrong.")
     except Exception as e:
-        print(f"Could not read {config_file}, {e}")
+        logging.exception(f"Could not read {config_file}, {e}")
 
 def gen_random_data():
     from random import randint, random
@@ -90,13 +86,13 @@ def init_objects():
     if config['sensors']['rain1h']:
         from rainfall import RainMonitor
         sensors['rmonitor'] = RainMonitor()
-        print("Starting rainfall monitoring thread.")
+        logging.info("Starting rainfall monitoring thread.")
         threads['rain'] = th.Thread(target=sensors['rmonitor'].monitor, daemon=True)
         threads['rain'].start()
     if config['sensors']['wspeed']:
         from wspeed import WindMonitor
         sensors['wmonitor'] = WindMonitor()
-        print("Starting wind speed monitoring thread.")
+        logging.info("Starting wind speed monitoring thread.")
         stop_event = th.Event()
         threads['wmonitor'] = th.Thread(target=sensors['wmonitor'].monitor_wind, daemon=True)
         threads['wspeed'] = th.Thread(target=sensors['wmonitor'].calculate_speed, args=[stop_event], daemon=True)
@@ -105,12 +101,12 @@ def init_objects():
     if config['sensors']['wdir']:
         from wdir import WindDirectionMonitor
         sensors['wdir_monitor'] = WindDirectionMonitor()
-        print("Starting wind direction monitoring thread.")
+        logging.info("Starting wind direction monitoring thread.")
         threads['wdir'] = th.Thread(target=sensors['wdir_monitor'].monitor, daemon=True)
         threads['wdir'].start()
     if config['sds011']['enabled']:
         from pysds011 import MonitorAirQuality
-        print("Loading AirQuality monitoring modules.")
+        logging.info("Loading AirQuality monitoring modules.")
         if config['sds011']['tty'] in config and config['sds011']['tty'] is not None:
             sensors['air_monitor'] = MonitorAirQuality(tty=config['sds011']['tty'], interval=config['sds011']['interval'])
         else:
@@ -119,7 +115,7 @@ def init_objects():
 
 if __name__=="__main__":
     logging.basicConfig(level=logging.DEBUG)
-    print("Reading 'wxstation.yaml'")
+    logging.info("Reading 'wxstation.yaml'")
     config = parse_config('wxstation.yaml')
     # Create database object
     db = WeatherDatabase(password=config['db_pass'],host=config['db_host'])
@@ -128,7 +124,7 @@ if __name__=="__main__":
     # If dev mode is disabled, enable sensors and import packages as needed
     if config['dev_mode'] is False:
         sensors, threads = init_objects()
-    print("Done reading config file.\nStarting main program now.")
+    logging.info("Done reading config file.\nStarting main program now.")
     # Create stop event for wind monitor
     stop_event = th.Event()
 
@@ -153,7 +149,7 @@ if __name__=="__main__":
                     logging.debug(f"temperature: {data['temperature']}, pressure: {data['pressure']}, humidity: {data['humidity']}")
                     break
                 except Exception as e:
-                    print(f"Exception occured while trying to read bme280: {e}")
+                    logging.exception(f"Exception occured while trying to read bme280: {e}")
                     continue
 
         if 'wmonitor' and 'wspeed' in threads:

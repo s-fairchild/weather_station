@@ -18,7 +18,7 @@ class RainMonitor:
             if not self.tips_lock.locked():
                 self.tips_lock.acquire()
                 self.tips += 1
-                logging.debug(f"Bucket tipped! Total rainfall calculated is {self.tips * self.bucket_size}")
+                logging.info(f"Bucket tipped! Total rainfall calculated is {self.tips * self.bucket_size}")
                 self.tips_lock.release()
                 break
             
@@ -34,7 +34,7 @@ class RainMonitor:
                 self.tips_lock.release()
                 break
             else:
-                print("RainMonitor thread locked! Waiting 2 seconds to reset tips...")
+                logging.error("RainMonitor thread locked! Waiting 2 seconds to reset tips...")
                 sleep(2)
 
     def monitor(self):

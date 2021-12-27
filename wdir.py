@@ -1,6 +1,6 @@
 from gpiozero import MCP3008
 from time import sleep
-import math
+import math, logging
 
 VIN = 3.3 # Input voltage can be 5.0 or 3.3
 ADC_CHANNEL= 0
@@ -66,7 +66,7 @@ class WindDirectionMonitor:
                 avg = arc + 360
             return 0.0 if avg == 360 else round(avg)
         except ZeroDivisionError as e:
-            print(f"ZeroDivisionError: {e}\nWind direction could not be calculated!")
+            logging.exception(f"ZeroDivisionError: {e}\nWind direction could not be calculated!")
 
     def monitor(self):
         adc, volts = MCP3008(channel=self.adc_channel), self.populate_V2D()
@@ -76,5 +76,5 @@ class WindDirectionMonitor:
                 self.wind_angles.append(volts[vane_voltage])
             else:
                 self.failed_count += 1
-                print(f"Unkown wind direction voltage: {vane_voltage}\n\tReading was not recorded\n\tTotal readings not recorded: {self.failed_count}")
+                logging.error(f"Unkown wind direction voltage: {vane_voltage}\n\tReading was not recorded\n\tTotal readings not recorded: {self.failed_count}")
             sleep(5)

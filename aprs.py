@@ -57,7 +57,6 @@ class SendAprs:
         tmp['ztime'] = time.strftime('%d%H%M', time.gmtime()) # Get zulu/UTC time
 
         all_rain_avgs = self.db.get_all_rain_avg()
-        #print(all_rain_avgs)
         tmp['rain1h'] = self.format_rain(all_rain_avgs['1'])
         tmp['rain24h'] = self.format_rain(all_rain_avgs['24'])
         tmp['rain00m'] = self.format_rain(all_rain_avgs['00'])
@@ -77,8 +76,8 @@ class SendAprs:
                 try:
                     AIS.connect()
                     AIS.sendall(packet)
-                    print(f"Packet transmitted to {config['aprs']['servers'][server]} at {time.strftime('%Y-%m-%d %H:%M', time.gmtime())} UTC time")
+                    logging.info(f"Packet transmitted to {config['aprs']['servers'][server]} at {time.strftime('%Y-%m-%d %H:%M', time.gmtime())} UTC time")
                 except Exception as e:
-                    print(f"An exception occured trying to send packet to {server}\nException: {e}")
+                    logging.exception(f"An exception occured trying to send packet to {server}\nException: {e}")
                 finally:
                     AIS.close()

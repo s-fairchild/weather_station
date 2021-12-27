@@ -66,8 +66,7 @@ class WeatherDatabase:
         all_rain_avgs = {}
         for hour in [ '00', '1', '24' ]:
             all_rain_avgs[hour] = self.rain_avg(hour)
-        logging.debug("\n\nRain averages collected:")
-        logging.debug(f"Rain from now to 00:00: {all_rain_avgs['00']}")
+        logging.debug(f"\n\nRain averages collected:\nRain from now to 00:00: {all_rain_avgs['00']}")
         logging.debug(f"Rain from the past hour: {all_rain_avgs['1']}")
         logging.debug(f"Rain from the past 24 hours: {all_rain_avgs['24']}\n")
         return all_rain_avgs

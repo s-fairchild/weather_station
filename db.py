@@ -54,7 +54,8 @@ class WeatherDatabase:
         else:
             raise ValueError("rain average hours must be 00, 1, or 24.")
 
-        conn = self.db_connect(); cur = conn.cursor()
+        conn = self.db_connect()
+        cur = conn.cursor()
         cur.execute(query)
         row = cur.fetchone()
         if row[0] is None:

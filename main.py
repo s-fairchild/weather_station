@@ -1,10 +1,11 @@
+from statistics import mean
 from sys import stdout
 import aprs, threading as th
 from time import sleep, time
 from db import WeatherDatabase
 from aprs import SendAprs
 from yaml import safe_load
-from os import popen
+import logging
 
 data = {
     'callsign': "",
@@ -22,22 +23,23 @@ data = {
     'humidity' : 0
 }
 
-def start_bme280(address=0x77):
+def start_bme280(address=0x76):
+    from bme280pi import Sensor
     while True:
         try:
             sensor = Sensor(address)
             break
         except Exception as e:
-            print(f"Exception occured, {e}\nMaybe try reloading i2c-dev and i2c_bcm2835 kernel modules?")
-            print(f"Waiting 10 seconds before retrying...")
+            logging.critical(f"Exception occured, {e}\nMaybe try reloading i2c-dev and i2c_bcm2835 kernel modules?")
+            logging.debug(f"Waiting 10 seconds before retrying...")
             sleep(10)
-            print(f"Trying to start bme280 again.")
+            logging.debug(f"Trying to start bme280 again.")
             continue
     try:
         chipid, version = sensor._get_info_about_sensor()
-        print(f"BME280 Information:\n\tChipID: {chipid}\n\tVersion: {version}")
+        logging.info(f"BME280 Information:\n\tChipID: {chipid}\n\tVersion: {version}")
     except Exception as e:
-        print(f"{e}: Unable to get BME280 ChipID and Version")
+        logging.error(f"{e}: Unable to get BME280 ChipID and Version")
     return sensor
 
 def wait_delay(start_time, interval):
@@ -49,7 +51,9 @@ def wait_delay(start_time, interval):
                 This is longer than the interval period of {interval / 60} minutes.")
             wait_time = 0
         print(f"Generating next report in {round((wait_time / 60), 2)} minutes")
-        stdout.flush(); sleep(wait_time) # Flush buffered output and wait exactly 5 minutes from start time
+        # Print any cached lines to screen now
+        stdout.flush()
+        sleep(wait_time) # Flush buffered output and wait exactly 5 minutes from start time
 
 def parse_config(config_file):
     try:
@@ -76,96 +80,118 @@ def gen_random_data():
     data['humidity'] = randint(0, 100)
     data['rainfall'] = randint(0, 5)
 
+def init_objects():
+    sensors = {}
+    threads = {}
+    # Create bme280 object if enabled        
+    if config['sensors']['bme280']:
+        sensors['bme280'] = start_bme280(config['bme280_addr'])
+    # Create bme280 object if enabled
+    if config['sensors']['rain1h']:
+        from rainfall import RainMonitor
+        sensors['rmonitor'] = RainMonitor()
+        print("Starting rainfall monitoring thread.")
+        threads['rain'] = th.Thread(target=sensors['rmonitor'].monitor, daemon=True)
+        threads['rain'].start()
+    if config['sensors']['wspeed']:
+        from wspeed import WindMonitor
+        sensors['wmonitor'] = WindMonitor()
+        print("Starting wind speed monitoring thread.")
+        stop_event = th.Event()
+        threads['wmonitor'] = th.Thread(target=sensors['wmonitor'].monitor_wind, daemon=True)
+        threads['wspeed'] = th.Thread(target=sensors['wmonitor'].calculate_speed, args=[stop_event], daemon=True)
+        threads['wmonitor'].start()
+        threads['wspeed'].start()
+    if config['sensors']['wdir']:
+        from wdir import WindDirectionMonitor
+        sensors['wdir_monitor'] = WindDirectionMonitor()
+        print("Starting wind direction monitoring thread.")
+        threads['wdir'] = th.Thread(target=sensors['wdir_monitor'].monitor, daemon=True)
+        threads['wdir'].start()
+    if config['sds011']['enabled']:
+        from pysds011 import MonitorAirQuality
+        print("Loading AirQuality monitoring modules.")
+        if config['sds011']['tty'] in config and config['sds011']['tty'] is not None:
+            sensors['air_monitor'] = MonitorAirQuality(tty=config['sds011']['tty'], interval=config['sds011']['interval'])
+        else:
+            sensors['air_monitor'] = MonitorAirQuality(interval=config['sds011']['interval'])
+    return sensors, threads
+
 if __name__=="__main__":
+    logging.basicConfig(level=logging.DEBUG)
     print("Reading 'wxstation.yaml'")
     config = parse_config('wxstation.yaml')
     # Create database object
     db = WeatherDatabase(password=config['db_pass'],host=config['db_host'])
     # Create aprs object
     aprs = SendAprs(db, config['loglevel'])
-
     # If dev mode is disabled, enable sensors and import packages as needed
     if config['dev_mode'] is False:
-        # Create bme280 object if enabled        
-        if config['sensors']['bme280']:      
-            from bme280pi import Sensor
-            sensor = start_bme280(config['bme280_addr'])
-        # Create bme280 object if enabled
-        if config['sensors']['rain1h']:
-            from rainfall import RainMonitor
-            rmonitor = RainMonitor()
-            print("Starting rainfall monitoring thread.")
-            th_rain = th.Thread(target=rmonitor.monitor, daemon=True)
-            th_rain.start()
-        if config['sensors']['wspeed']:
-            from wspeed import WindMonitor
-            from statistics import mean
-            wmonitor = WindMonitor()
-            print("Starting wind speed monitoring thread.")
-            stop_event = th.Event()
-            th_wmonitor = th.Thread(target=wmonitor.monitor_wind, daemon=True)
-            th_wspeed = th.Thread(target=wmonitor.calculate_speed, args=[stop_event], daemon=True)
-            th_wspeed.start(); th_wmonitor.start()
-        if config['sensors']['wdir']:
-            from wdir import WindDirectionMonitor
-            wdir_monitor = WindDirectionMonitor()
-            print("Starting wind direction monitoring thread.")
-            th_wdir = th.Thread(target=wdir_monitor.monitor, daemon=True)
-            th_wdir.start()
-        if config['sds011']['enabled']: # If SDS011 is enabled collect readings
-            from pysds011 import MonitorAirQuality
-            print("Loading AirQuality monitoring modules.")
-            if config['sds011']['tty'] in config and config['sds011']['tty'] is not None:
-                air_monitor = MonitorAirQuality(tty=config['sds011']['tty'], interval=config['sds011']['interval'])
-            else:
-                air_monitor = MonitorAirQuality(interval=config['sds011']['interval'])
+        sensors, threads = init_objects()
     print("Done reading config file.\nStarting main program now.")
+    # Create stop event for wind monitor
+    stop_event = th.Event()
 
     while True:
         if config['dev_mode']:
             gen_random_data()
-        start_time = time() # Capture loop start time
-        if 'air_monitor' in locals(): # If SDS011 is enabled make and start thread
-            th_sds011 = th.Thread(target=air_monitor.monitor)
-            th_sds011.start()
 
-        if 'sensor' in locals():
+        start_time = time() # Capture loop start time
+        if 'air_monitor' in sensors: # If SDS011 is enabled make and start thread
+            logging.info('Starting air_monitor thread')
+            threads['sds011'] = th.Thread(target=sensors['air_monitor'].monitor)
+            threads['sds011'].start()
+            logging.debug(f"sds011 thread status: {threads['sds011'].is_Alive}")
+
+        if 'bme280' in sensors:
+            logging.info('Reading bme280 temperature, pressure, and humidity now.')
             while True:
                 try:
-                    data['temperature'] = sensor.get_temperature(unit='F')
-                    data['pressure'] = sensor.get_pressure()
-                    data['humidity'] = sensor.get_humidity()
+                    data['temperature'] = sensors['bme280'].get_temperature(unit='F')
+                    data['pressure'] = sensors['bme280'].get_pressure()
+                    data['humidity'] = sensors['bme280'].get_humidity()
+                    logging.debug(f"temperature: {data['temperature']}, pressure: {data['pressure']}, humidity: {data['humidity']}")
                     break
                 except Exception as e:
-                    sensor = start_bme280(config['bme280_addr'])
+                    print(f"Exception occured while trying to read bme280: {e}")
                     continue
 
-        if 'th_wmonitor' and 'th_wspeed' in locals():
-            if len(wmonitor.wind_list) > 0:
+        if 'wmonitor' and 'wspeed' in threads:
+            if len(sensors['wmonitor'].wind_list) > 0:
+                logging.debug('Setting stop event for wmonitor now')
                 stop_event.set()
-                wmonitor.wind_count_lock.acquire()
-                data['wspeed'], data['wgusts'] = mean(wmonitor.wind_list), max(wmonitor.wind_list)
-                wmonitor.wind_list.clear()
-                wmonitor.wind_count_lock.release()
+                logging.debug('Aquiring lock for wind_count_lock now')
+                sensors['wmonitor'].wind_count_lock.acquire()
+                data['wspeed'], data['wgusts'] = mean(sensors['wmonitor'].wind_list), max(sensors['wmonitor'].wind_list)
+                logging.info(f"wind speed: {data['wspeed']} wind gusts: {data['wgusts']}")
+                sensors['wmonitor'].wind_list.clear()
+                sensors['wmonitor'].wind_count_lock.release()
                 stop_event.clear()
             else:
+                logging.info(f"wind monitor's wind list was not greater than zero: {len(sensors['wmonitor'].wind_list)}")
                 data['wgusts'], data['wspeed'] = 0, 0
 
-        if 'th_wdir' in locals():            
-            data['wdir'] = wdir_monitor.average() # Record average wind direction in degrees
-            wdir_monitor.wind_angles.clear() # Clear readings to average
+        if 'wdir' in threads:            
+            data['wdir'] = sensors['wdir_monitor'].average() # Record average wind direction in degrees
+            sensors['wdir_monitor'].wind_angles.clear() # Clear readings to average
 
-        if 'th_rain' in locals():
-            data['rainfall'] = rmonitor.total_rain(); rmonitor.clear_total_rain()
+        if 'rain' in threads:
+            data['rainfall'] = sensors['rmonitor'].total_rain()
+            sensors['rmonitor'].clear_total_rain()
         
-        if 'air_monitor' in locals():
-            th_sds011.join() # wait for thread to complete before getting average readings
-            data['pm25_avg'], data['pm10_avg'] = air_monitor.average()
-            air_monitor.air_values['pm25_total'].clear(); air_monitor.air_values['pm10_total'].clear() # Reset readings used for averages
+        if 'air_monitor' in sensors:
+            # wait for thread to complete before getting average readings
+            threads['sds011'].join()
+            data['pm25_avg'], data['pm10_avg'] = sensors['air_monitor'].average()
+            sensors['air_monitor'].air_values['pm25_total'].clear()
+            # Reset readings used for averages
+            sensors['air_monitor'].air_values['pm10_total'].clear()
 
         th_makepacket = th.Thread(target=aprs.send_data(data, config))
         th_sensorsave = th.Thread(target=db.read_save_sensors(data))
             
-        th_sensorsave.start(); th_makepacket.start()
-        th_sensorsave.join(); th_makepacket.join()
+        th_sensorsave.start()
+        th_makepacket.start()
+        th_sensorsave.join()
+        th_makepacket.join()
         wait_delay(start_time, config['report_interval'])

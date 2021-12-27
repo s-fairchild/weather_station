@@ -43,11 +43,14 @@ class WeatherDatabase:
         conn.commit()
         conn.close()
 
-    def rain_avg(self, hours): # valid arguements are 00 for since midnight, 1 for past hour, 24 for past 24 hours
-        if hours == 00: # Queries average rainfall between now and 00:00 of today
-            query = """SELECT AVG(rainfall) FROM sensors where created between CURRENT_DATE() AND NOW() AND rainfall!=0;"""
-        elif hours == 1 or 24: # Queries average ranfall for the past hour or 24 hours
-            query = f"SELECT AVG(rainfall) FROM sensors WHERE created >= now() - INTERVAL {hours} HOUR AND rainfall!=0;"
+    def rain_avg(self, hours):
+        """valid arguements are 00 for since midnight, 1 for past hour, 24 for past 24 hours"""
+        if hours == 00:
+            # Queries average rainfall between now and 00:00 of today
+            query = """SELECT ROUND(AVG(rainfall), 3) FROM sensors where created between CURRENT_DATE() AND NOW();"""
+        elif hours == 1 or 24:
+            # Queries average rainfall for the past hour or 24 hours
+            query = f"SELECT ROUND(AVG(rainfall), 3) FROM sensors WHERE created <= now() - INTERVAL {hours} HOUR;"
         else:
             raise ValueError("rain average hours must be 00, 1, or 24.")
 
@@ -66,7 +69,7 @@ class WeatherDatabase:
         else:
             conn.close()
             logging.debug(f"Query successful: {query}\nReturned row: {row[0]}")
-            return row[0] # Rainfall readings of 0.000 will return NULL, return 0 if NULL
+            return row[0]
 
     def get_all_rain_avg(self):
         all_rain_avgs = {}

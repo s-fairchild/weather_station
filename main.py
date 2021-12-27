@@ -53,7 +53,7 @@ def wait_delay(start_time, interval):
         print(f"Generating next report in {round((wait_time / 60), 2)} minutes")
         # Print any cached lines to screen now
         stdout.flush()
-        sleep(wait_time) # Flush buffered output and wait exactly 5 minutes from start time
+        sleep(wait_time) # Flush buffered output and wait for seconds in wxstation.yaml report_interval:
 
 def parse_config(config_file):
     try:

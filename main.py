@@ -87,22 +87,22 @@ def init_objects():
         from rainfall import RainMonitor
         sensors['rmonitor'] = RainMonitor()
         logging.info("Starting rainfall monitoring thread.")
-        threads['rain'] = th.Thread(target=sensors['rmonitor'].monitor, daemon=True)
+        threads['rain'] = th.Thread(target=sensors['rmonitor'].monitor, daemon=True, name="Thread-Rain_Monitor")
         threads['rain'].start()
     if config['sensors']['wspeed']:
         from wspeed import WindMonitor
         sensors['wmonitor'] = WindMonitor()
         logging.info("Starting wind speed monitoring thread.")
         stop_event = th.Event()
-        threads['wmonitor'] = th.Thread(target=sensors['wmonitor'].monitor_wind, daemon=True)
-        threads['wspeed'] = th.Thread(target=sensors['wmonitor'].calculate_speed, args=[stop_event], daemon=True)
+        threads['wmonitor'] = th.Thread(target=sensors['wmonitor'].monitor_wind, daemon=True, name="Thread-Wind_Monitor")
+        threads['wspeed'] = th.Thread(target=sensors['wmonitor'].calculate_speed, args=[stop_event], daemon=True, name="Thread-Wind_Speed")
         threads['wmonitor'].start()
         threads['wspeed'].start()
     if config['sensors']['wdir']:
         from wdir import WindDirectionMonitor
         sensors['wdir_monitor'] = WindDirectionMonitor()
         logging.info("Starting wind direction monitoring thread.")
-        threads['wdir'] = th.Thread(target=sensors['wdir_monitor'].monitor, daemon=True)
+        threads['wdir'] = th.Thread(target=sensors['wdir_monitor'].monitor, daemon=True, name="Thread-Wind_Direction")
         threads['wdir'].start()
     if config['sds011']['enabled']:
         from pysds011 import MonitorAirQuality
@@ -135,7 +135,7 @@ if __name__=="__main__":
         start_time = time() # Capture loop start time
         if 'air_monitor' in sensors: # If SDS011 is enabled make and start thread
             logging.info('Starting air_monitor thread')
-            threads['sds011'] = th.Thread(target=sensors['air_monitor'].monitor)
+            threads['sds011'] = th.Thread(target=sensors['air_monitor'].monitor, name="Thread-Air_Monitor")
             threads['sds011'].start()
             logging.debug(f"sds011 thread status: {threads['sds011'].is_Alive}")
 
@@ -183,8 +183,8 @@ if __name__=="__main__":
             # Reset readings used for averages
             sensors['air_monitor'].air_values['pm10_total'].clear()
 
-        th_makepacket = th.Thread(target=aprs.send_data(data, config))
-        th_sensorsave = th.Thread(target=db.read_save_sensors(data))
+        th_makepacket = th.Thread(target=aprs.send_data(data, config), name="Thread-Make_APRS_Packet")
+        th_sensorsave = th.Thread(target=db.read_save_sensors(data), name="Thread-Save_Sensor_Data")
             
         th_sensorsave.start()
         th_makepacket.start()
